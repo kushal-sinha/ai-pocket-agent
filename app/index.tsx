@@ -1,13 +1,13 @@
 ﻿import Colors from "@/shared/Colors";
-import LottieView from "lottie-react-native";
-import { Dimensions, Platform, StyleSheet, Text, TouchableOpacity, View, StatusBar } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { useAuth, useSSO, useUser } from "@clerk/clerk-expo";
-import { useCallback, useEffect } from "react";
-import * as WebBrowser from 'expo-web-browser';
-import { router, useRouter } from "expo-router";
 import * as AuthSession from 'expo-auth-session';
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import * as WebBrowser from 'expo-web-browser';
+import LottieView from "lottie-react-native";
+import { useCallback, useEffect } from "react";
+import { Dimensions, Platform, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export const useWarmUpBrowser = () => {
   useEffect(() => {
@@ -41,45 +41,28 @@ export default function Index() {
 
   // Use the `useSSO()` hook to access the `startSSOFlow()` method
   const { startSSOFlow } = useSSO()
-
   const onLoginPress = useCallback(async () => {
     try {
-      // Start the authentication process by calling `startSSOFlow()`
-      const { createdSessionId, setActive, signIn, signUp } = await startSSOFlow({
-        strategy: 'oauth_google',
-        // For web, defaults to current path
-        // For native, you must pass a scheme, like AuthSession.makeRedirectUri({ scheme, path })
-        // For more info, see https://docs.expo.dev/versions/latest/sdk/auth-session/#authsessionmakeredirecturioptions
-        redirectUrl: AuthSession.makeRedirectUri(),
-      })
+      console.log("Starting Google login…");
 
-      // If sign in was successful, set the active session
+      const { createdSessionId, setActive } = await startSSOFlow({
+        strategy: "oauth_google",
+        redirectUrl: AuthSession.makeRedirectUri({ scheme: "aipocketagent" }),
+      });
+
+      console.log("SSO response:", createdSessionId);
+
       if (createdSessionId) {
-        setActive!({
-          session: createdSessionId,
-          // Check for session tasks and navigate to custom UI to help users resolve them
-          // See https://clerk.com/docs/guides/development/custom-flows/overview#session-tasks
-          navigate: async ({ session }) => {
-            if (session?.currentTask) {
-              console.log(session?.currentTask)
-              router.push('/sign-in/tasks')
-              return
-            }
-
-            router.push('/')
-          },
-        })
+        await setActive!({ session: createdSessionId });
+        router.push("/");
       } else {
-        // If there is no `createdSessionId`,
-        // there are missing requirements, such as MFA
-        // See https://clerk.com/docs/guides/development/custom-flows/authentication/oauth-connections#handle-missing-requirements
+        console.log("No session created, missing MFA or other requirements.");
       }
     } catch (err) {
-      // See https://clerk.com/docs/guides/development/custom-flows/error-handling
-      // for more info on error handling
-      console.error(JSON.stringify(err, null, 2))
+      console.error("Login error:", err);
     }
-  }, [])
+  }, []);
+
   return (
     <LinearGradient
       colors={["#0A1D37", "#1E3C72", "#2A5298"]}

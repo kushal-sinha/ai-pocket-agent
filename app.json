@@ -7,6 +7,9 @@
     "icon": "./assets/images/icon.png",
     "scheme": "aipocketagent",
     "userInterfaceStyle": "automatic",
+    "extra": {
+      "clerkPublishableKey": "pk_test_c2F2aW5nLWdlbGRpbmctMjMuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    },
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
