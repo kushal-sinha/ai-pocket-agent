@@ -1,38 +1,122 @@
-﻿import { Dimensions, Text, Platform, StyleSheet, Button, View } from "react-native";
+﻿import Colors from "@/shared/Colors";
 import LottieView from "lottie-react-native";
+import { Dimensions, Platform, StyleSheet, Text, TouchableOpacity, View, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Colors from "@/shared/Colors";
+import { LinearGradient } from "expo-linear-gradient";
 
 export default function Index() {
   return (
-    <SafeAreaView style={styles.container}>
-      <LottieView
-        source={require("../assets/images/login_lottie.json")}
-        autoPlay
-        loop
-        style={styles.animation}
-      />
-      <Text style={{ fontSize: 28, fontWeight: 'bold', textAlign: 'center', marginBottom: 10, color: Colors.PRIMARY }}>Welcome to AI Pocket Agent!</Text>
-      <Text style={{ fontSize: 18, textAlign: 'center', color: Colors.GREY }}>Your ultimate AI Personal Agent to make life easier
-        Try it today, Completely Free!</Text>
+    <LinearGradient
+      colors={["#0A1D37", "#1E3C72", "#2A5298"]}
+      style={styles.gradient}
+    >
+      <SafeAreaView style={styles.container}>
+        <StatusBar hidden={true} />
 
-      <View style={{ width: '100%', padding: 15, backgroundColor: Colors.PRIMARY, borderRadius: 12, marginTop: 30 }}>
-        <Text style={{ fontSize: 16, textAlign: 'center', color: Colors.WHITE }}>Get Started</Text>
-      </View>
-    </SafeAreaView>
+        <View style={styles.animationWrapper}>
+          <LinearGradient
+            colors={["#5B86E5", "#36D1DC"]}
+            style={styles.glowCircle}
+          >
+            <LottieView
+              source={require("../assets/images/login_lottie.json")}
+              autoPlay
+              loop
+              style={styles.animation}
+            />
+          </LinearGradient>
+        </View>
+
+        <Text style={styles.title}>Welcome to AI Pocket Agent!</Text>
+
+        <Text style={styles.subtitle}>
+          Your ultimate AI Personal Agent to make life easier.{"\n"}
+          Try it today, completely free!
+        </Text>
+
+        <TouchableOpacity activeOpacity={0.8} style={styles.buttonWrapper}>
+          <LinearGradient
+            colors={["#36D1DC", "#5B86E5"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.button}
+          >
+            <Text style={styles.buttonText}>Get Started</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    padding: 10,
-
+    padding: 20,
+    justifyContent: "center",
+    alignItems: "center",
     paddingTop: Platform.OS === "android" ? 30 : 40,
   },
+  animationWrapper: {
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 30,
+  },
+  glowCircle: {
+    width: Dimensions.get("screen").width * 0.7,
+    height: Dimensions.get("screen").width * 0.7,
+    borderRadius: Dimensions.get("screen").width * 0.35,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#36D1DC",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 25,
+    elevation: 15,
+  },
   animation: {
-    width: Dimensions.get("screen").width * 0.9,
-    height: 280,
-    marginTop: 50
+    width: Dimensions.get("screen").width * 0.55,
+    height: Dimensions.get("screen").width * 0.55,
+  },
+  title: {
+    flex: 1,
+    fontSize: 30,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 15,
+    color: Colors.WHITE,
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 4,
+  },
+  subtitle: {
+    fontSize: 18,
+    textAlign: "center",
+    color: "#D6E6F2",
+    marginBottom: 30,
+    lineHeight: 24,
+  },
+  buttonWrapper: {
+    width: "100%",
+    borderRadius: 14,
+    overflow: "hidden",
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+  },
+  button: {
+    padding: 16,
+    alignItems: "center",
+    borderRadius: 14,
+  },
+  buttonText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: Colors.WHITE,
   },
 });
