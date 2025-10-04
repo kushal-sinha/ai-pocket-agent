@@ -1,3 +1,4 @@
+import AgentListComponent from '@/components/Home/AgentListComponent';
 import Colors from '@/shared/Colors';
 import { useNavigation } from 'expo-router';
 import LottieView from 'lottie-react-native';
@@ -11,7 +12,7 @@ export default function Home() {
     useEffect(() => {
         navigation.setOptions({
             headerTitle: () => (
-                <View style={[styles.headerTitleContainer, Platform.OS === 'ios' && { marginBottom: 10, paddingLeft: 10 }]}>
+                <View style={[styles.headerTitleContainer, Platform.OS === 'ios' && { marginBottom: 10, paddingLeft: 20 }]}>
                     <Text style={styles.headerTitle}>AI Pocket Agent</Text>
                 </View>
             ),
@@ -40,16 +41,14 @@ export default function Home() {
 
     return (
         <View style={styles.container}>
-            <Text>Home</Text>
+            <AgentListComponent />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+        padding: 15
     },
     headerTitleContainer: {
         alignItems: 'center',
