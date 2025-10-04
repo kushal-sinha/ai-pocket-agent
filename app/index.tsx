@@ -1,12 +1,14 @@
-﻿import Colors from "@/shared/Colors";
+﻿import { fireStoreDb } from "@/config/FirebaseConfig";
+import Colors from "@/shared/Colors";
 import { useAuth, useSSO, useUser } from "@clerk/clerk-expo";
 import * as AuthSession from 'expo-auth-session';
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as WebBrowser from 'expo-web-browser';
+import { doc, setDoc } from "firebase/firestore";
 import LottieView from "lottie-react-native";
-import { useCallback, useEffect } from "react";
-import { Dimensions, Platform, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, Dimensions, Platform, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export const useWarmUpBrowser = () => {
@@ -28,11 +30,10 @@ export default function Index() {
   const { isSignedIn } = useAuth();
   const router = useRouter();
   const { user } = useUser();
-  console.log(user?.primaryEmailAddress?.emailAddress);
-
+  const [loading, setLoading] = useState(false);
   useEffect(() => {
     if (isSignedIn) {
-      // redirect to home screen
+      setLoading(false);
     }
   }, [isSignedIn])
 
@@ -45,12 +46,19 @@ export default function Index() {
     try {
       console.log("Starting Google login…");
 
-      const { createdSessionId, setActive } = await startSSOFlow({
+      const { createdSessionId, setActive, signUp } = await startSSOFlow({
         strategy: "oauth_google",
         redirectUrl: AuthSession.makeRedirectUri({ scheme: "aipocketagent" }),
       });
 
-      console.log("SSO response:", createdSessionId);
+      if (signUp) {
+        await setDoc(doc(fireStoreDb, 'users', signUp.id ?? ''), {
+          email: signUp.emailAddress,
+          name: signUp.firstName + ' ' + signUp.lastName,
+          joinDate: Date.now(),
+          credits: 20
+        });
+      }
 
       if (createdSessionId) {
         await setActive!({ session: createdSessionId });
@@ -91,17 +99,25 @@ export default function Index() {
           Your ultimate AI Personal Agent to make life easier.{"\n"}
           Try it today, completely free!
         </Text>
-
-        <TouchableOpacity onPress={onLoginPress} activeOpacity={0.8} style={styles.buttonWrapper}>
-          <LinearGradient
-            colors={["#36D1DC", "#5B86E5"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.button}
+        {!loading ? (
+          <TouchableOpacity
+            onPress={onLoginPress}
+            activeOpacity={0.8}
+            style={styles.buttonWrapper}
           >
-            <Text style={styles.buttonText}>Get Started</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+            <LinearGradient
+              colors={["#36D1DC", "#5B86E5"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.button}
+            >
+              <Text style={styles.buttonText}>Get Started</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        ) : (
+          <ActivityIndicator size="large" color={Colors.WHITE} />
+        )}
+
       </SafeAreaView>
     </LinearGradient>
   );
