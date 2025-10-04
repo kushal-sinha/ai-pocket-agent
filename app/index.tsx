@@ -34,6 +34,7 @@ export default function Index() {
   useEffect(() => {
     if (isSignedIn) {
       setLoading(false);
+      router.replace('/(tabs)/Home')
     }
   }, [isSignedIn])
 
