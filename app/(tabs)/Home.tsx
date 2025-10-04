@@ -1,4 +1,5 @@
 import AgentListComponent from '@/components/Home/AgentListComponent';
+import CreateAgentBanner from '@/components/Home/CreateAgentBanner';
 import Colors from '@/shared/Colors';
 import { useNavigation } from 'expo-router';
 import LottieView from 'lottie-react-native';
@@ -42,6 +43,7 @@ export default function Home() {
     return (
         <View style={styles.container}>
             <AgentListComponent />
+            <CreateAgentBanner />
         </View>
     );
 }

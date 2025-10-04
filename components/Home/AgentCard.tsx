@@ -36,7 +36,7 @@ const style = StyleSheet.create({
     container: {
         backgroundColor: Colors.WHITE,
         borderRadius: 20,
-        minHeight: 200,
+        minHeight: 230,
         overflow: 'hidden',
 
     },
