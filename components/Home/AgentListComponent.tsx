@@ -1,6 +1,7 @@
 import { Agents } from '@/shared/AgentList'
+import { RelativePathString, useRouter } from 'expo-router'
 import React, { useMemo } from 'react'
-import { FlatList, View } from 'react-native'
+import { FlatList, TouchableOpacity } from 'react-native'
 import AgentCard from './AgentCard'
 import NonFeaturedAgentCard from './NonFeaturedAgentCard'
 
@@ -10,6 +11,7 @@ type AgentListComponentProps = {
 
 export default function AgentListComponent({ isFeatured }: AgentListComponentProps) {
     const featuredAgents = useMemo(() => Agents.filter(agent => agent.featured === isFeatured), [isFeatured])
+    const router = useRouter();
 
     return (
         <FlatList
@@ -17,9 +19,17 @@ export default function AgentListComponent({ isFeatured }: AgentListComponentPro
             numColumns={2}
             keyExtractor={agent => agent.id.toString()}
             renderItem={({ item, index }) => (
-                <View style={{ flex: 1, padding: 5 }}>
+                <TouchableOpacity onPress={() => router.push({
+                    pathname: '/chat' as RelativePathString,
+                    params: {
+                        agentName: item?.name,
+                        initialText: item?.initialText,
+                        agentPrompt: item?.prompt,
+                        agentId: item?.id,
+                    }
+                })} style={{ flex: 1, padding: 5 }}>
                     {item.featured ? <AgentCard agent={item} key={index} /> : <NonFeaturedAgentCard agent={item} key={index} />}
-                </View>
+                </TouchableOpacity>
             )}
         />
     )

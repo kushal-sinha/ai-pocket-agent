@@ -129,14 +129,14 @@ export const Agents = [
     //         type: 'chat',
     //         featured: false
     //     },
-    //     {
-    //         id: 14,
-    //         name: 'Caption Generator',
-    //         desc: 'Create captions for social media.',
-    //         image: require('../assets/images/agent_4.png'),
-    //         initialText: 'A picture of a puppy playing in the park.',
-    //         prompt: 'You are a caption generator. Create short, catchy captions with hashtags.',
-    //         type: 'image+text',
-    //         featured: true
-    //     },
+    {
+        id: 14,
+        name: 'Caption Generator',
+        desc: 'Create captions for social media.',
+        image: require('../assets/images/agent_4.png'),
+        initialText: 'A picture of a puppy playing in the park.',
+        prompt: 'You are a caption generator. Create short, catchy captions with hashtags.',
+        type: 'image+text',
+        featured: true
+    },
 ];
