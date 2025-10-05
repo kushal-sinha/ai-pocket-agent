@@ -1,7 +1,8 @@
+import Colors from '@/shared/Colors';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
-import { Plus } from 'lucide-react-native';
+import { Camera, Plus, Send } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const initialMessages = [
     {
@@ -53,15 +54,25 @@ export default function ChatUI() {
         });
     }, [navigation]);
     return (
-        <View>
+        <KeyboardAvoidingView keyboardVerticalOffset={100} behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[{ padding: 10, flex: 1, marginBottom: Platform.OS === 'ios' ? 20 : 0 }]}>
             <FlatList
                 data={messages}
                 renderItem={({ item, index }) => (
                     <View style={[styles.messageContainer, item.role === 'user' ? styles.userMessage : styles.assistantMessage]}>
-                        <Text>{item.text}</Text>
+                        <Text style={[styles.messageText, item.role === 'user' ? styles.userText : styles.assistantText]}>{item.text}</Text>
                     </View>
                 )} />
-        </View>
+
+            <View style={styles.inputContainer}>
+                <TouchableOpacity style={{ marginRight: 10, marginTop: 3 }}>
+                    <Camera size={27} />
+                </TouchableOpacity>
+                <TextInput style={styles.input} placeholder='Type a message ...' />
+                <TouchableOpacity style={{ padding: 7, backgroundColor: Colors.PRIMARY, borderRadius: 99 }}>
+                    <Send color={Colors.WHITE} size={20} />
+                </TouchableOpacity>
+            </View>
+        </KeyboardAvoidingView>
     )
 }
 
@@ -69,15 +80,43 @@ export default function ChatUI() {
 const styles = StyleSheet.create({
     messageContainer: {
         maxWidth: '75%',
-        marginVertical: 4,
+        marginVertical: 10,
         padding: 10,
-        borderRadius: 12
+        borderRadius: 10,
     },
     userMessage: {
-
+        backgroundColor: Colors.PRIMARY,
+        alignSelf: 'flex-end',
+        borderBottomRightRadius: 2
     },
     assistantMessage: {
+        backgroundColor: Colors.LIGHT_GREY,
+        alignSelf: 'flex-start',
+        borderBottomLeftRadius: 20
+    },
+    messageText: {
+        fontSize: 16,
+    },
+    userText: {
+        color: Colors.WHITE
+    },
+    assistantText: {
+        color: Colors.BLACK
+    },
+    inputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 10,
 
+    },
+    input: {
+        flex: 1,
+        padding: 10,
+        borderRadius: 20,
+        borderColor: '#CCC',
+        backgroundColor: Colors.WHITE,
+        marginRight: 8,
+        paddingHorizontal: 15
     }
 
 });
