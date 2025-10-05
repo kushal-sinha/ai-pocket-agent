@@ -3,8 +3,12 @@ import React, { useMemo } from 'react'
 import { FlatList, View } from 'react-native'
 import AgentCard from './AgentCard'
 
-export default function AgentListComponent() {
-    const featuredAgents = useMemo(() => Agents.filter(agent => agent.featured), [])
+type AgentListComponentProps = {
+    isFeatured: boolean
+}
+
+export default function AgentListComponent({ isFeatured }: AgentListComponentProps) {
+    const featuredAgents = useMemo(() => Agents.filter(agent => agent.featured === isFeatured), [isFeatured])
 
     return (
         <FlatList
@@ -16,7 +20,8 @@ export default function AgentListComponent() {
                     <AgentCard agent={item} />
                 </View>
             )}
-            contentContainerStyle={{ paddingBottom: 20 }}
         />
     )
 }
+
+

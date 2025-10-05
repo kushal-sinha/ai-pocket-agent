@@ -5,7 +5,7 @@ import { useNavigation } from 'expo-router';
 import LottieView from 'lottie-react-native';
 import { Settings } from 'lucide-react-native';
 import React, { useEffect } from 'react';
-import { Dimensions, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function Home() {
     const navigation = useNavigation();
@@ -41,10 +41,18 @@ export default function Home() {
     }, []);
 
     return (
-        <View style={styles.container}>
-            <AgentListComponent />
-            <CreateAgentBanner />
-        </View>
+        <FlatList
+            data={[]}
+            renderItem={null}
+            ListHeaderComponent={() => (
+                <View style={styles.container}>
+                    <AgentListComponent isFeatured={true} />
+                    <CreateAgentBanner />
+                    <AgentListComponent isFeatured={false} />
+
+                </View>
+            )}
+        />
     );
 }
 
