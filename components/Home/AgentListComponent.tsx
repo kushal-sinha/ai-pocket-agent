@@ -2,6 +2,7 @@ import { Agents } from '@/shared/AgentList'
 import React, { useMemo } from 'react'
 import { FlatList, View } from 'react-native'
 import AgentCard from './AgentCard'
+import NonFeaturedAgentCard from './NonFeaturedAgentCard'
 
 type AgentListComponentProps = {
     isFeatured: boolean
@@ -15,9 +16,9 @@ export default function AgentListComponent({ isFeatured }: AgentListComponentPro
             data={featuredAgents}
             numColumns={2}
             keyExtractor={agent => agent.id.toString()}
-            renderItem={({ item }) => (
+            renderItem={({ item, index }) => (
                 <View style={{ flex: 1, padding: 5 }}>
-                    <AgentCard agent={item} />
+                    {item.featured ? <AgentCard agent={item} key={index} /> : <NonFeaturedAgentCard agent={item} key={index} />}
                 </View>
             )}
         />
