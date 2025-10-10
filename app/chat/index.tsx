@@ -1,7 +1,7 @@
 import Colors from '@/shared/Colors';
 import { AIChatModel } from '@/shared/GlobalApi';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
-import { Camera, Copy, Plus, Send } from 'lucide-react-native';
+import { Camera, Copy, Plus, Send, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -16,10 +16,49 @@ import {
     View,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import * as ImagePicker from 'expo-image-picker'
+import { Image } from 'expo-image';
 
 interface Message {
     role: string;
     content: string;
+}
+
+const uploadToCloudinary = async (uri: string): Promise<string | null> => {
+    try {
+        const cloudName = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME;
+        const uploadPreset = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+
+        if (!cloudName || !uploadPreset) {
+            console.warn('Missing Cloudinary config: EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME or EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET');
+            return null;
+        }
+
+        const formData = new FormData();
+        formData.append('file', {
+            // React Native fetch requires this object shape
+            // name can be anything; type best-effort
+            uri,
+            name: 'upload.jpg',
+            type: 'image/jpeg',
+        } as any);
+        formData.append('upload_preset', uploadPreset as string);
+
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!res.ok) {
+            console.error('Cloudinary upload failed with status', res.status);
+            return null;
+        }
+        const data = await res.json();
+        return data.secure_url || data.url || null;
+    } catch (e) {
+        console.error('Cloudinary upload error', e);
+        return null;
+    }
 }
 
 export default function ChatUI() {
@@ -28,6 +67,8 @@ export default function ChatUI() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isSending, setIsSending] = useState(false);
+    const [image, setImage] = useState<string | null>(null);
+
 
     useEffect(() => {
         navigation.setOptions({
@@ -74,12 +115,27 @@ export default function ChatUI() {
         const trimmed = input.trim();
         if (!trimmed || isSending) return;
 
-        const userMessage: Message = { role: 'user', content: trimmed };
+        setIsSending(true);
+
+        let imageUrl: string | null = null;
+        if (image) {
+            imageUrl = await uploadToCloudinary(image);
+            if (!imageUrl) {
+                if (Platform.OS === 'android') {
+                    ToastAndroid.show('Image upload failed', ToastAndroid.SHORT);
+                }
+                setIsSending(false);
+                return;
+            }
+        }
+
+        const contentWithImage = imageUrl ? `${trimmed}\n\n[Image]: ${imageUrl}` : trimmed;
+        const userMessage: Message = { role: 'user', content: contentWithImage };
         const updatedConversation = [...messages, userMessage];
 
         setMessages(updatedConversation);
         setInput('');
-        setIsSending(true);
+        if (imageUrl) setImage(null);
 
         try {
             const result = await AIChatModel(updatedConversation);
@@ -106,6 +162,22 @@ export default function ChatUI() {
             }
         } catch (error) {
             console.error('Failed to copy text', error);
+        }
+    };
+
+    const pickImage = async () => {
+        // No permissions request is necessary for launching the image library
+        let result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: false,
+            aspect: [4, 3],
+            quality: 0.5,
+        });
+
+        console.log(result);
+
+        if (!result.canceled) {
+            setImage(result.assets[0].uri);
         }
     };
 
@@ -152,27 +224,36 @@ export default function ChatUI() {
                     <Text style={styles.typingText}>{agentName} is thinking</Text>
                 </View>
             )}
-
-            <View style={styles.inputContainer}>
-                <TouchableOpacity style={{ marginRight: 10, marginTop: 3 }} disabled={isSending}>
-                    <Camera size={27} />
-                </TouchableOpacity>
-                <TextInput
-                    onChangeText={setInput}
-                    style={styles.input}
-                    placeholder="Type a message ..."
-                    value={input}
-                    editable={!isSending}
-                    returnKeyType="send"
-                    onSubmitEditing={onSendMessage}
-                />
-                <TouchableOpacity
-                    onPress={onSendMessage}
-                    style={{ padding: 7, backgroundColor: Colors.PRIMARY, borderRadius: 99 }}
-                    disabled={isSending}
-                >
-                    <Send color={Colors.WHITE} size={20} />
-                </TouchableOpacity>
+            <View >
+                {image && (
+                    <View style={{ flexDirection: 'row', marginBottom: 5, alignItems: 'center', gap: 8 }}>
+                        <Image source={{ uri: image }} style={{ width: 50, height: 50, borderRadius: 6 }} />
+                        <TouchableOpacity onPress={() => setImage(null)}>
+                            <X />
+                        </TouchableOpacity>
+                    </View>
+                )}
+                <View style={styles.inputContainer}>
+                    <TouchableOpacity onPress={pickImage} style={{ marginRight: 10, marginTop: 3 }} disabled={isSending}>
+                        <Camera size={27} />
+                    </TouchableOpacity>
+                    <TextInput
+                        onChangeText={setInput}
+                        style={styles.input}
+                        placeholder="Type a message ..."
+                        value={input}
+                        editable={!isSending}
+                        returnKeyType="send"
+                        onSubmitEditing={onSendMessage}
+                    />
+                    <TouchableOpacity
+                        onPress={onSendMessage}
+                        style={{ padding: 7, backgroundColor: Colors.PRIMARY, borderRadius: 99 }}
+                        disabled={isSending}
+                    >
+                        <Send color={Colors.WHITE} size={20} />
+                    </TouchableOpacity>
+                </View>
             </View>
         </KeyboardAvoidingView>
     );
