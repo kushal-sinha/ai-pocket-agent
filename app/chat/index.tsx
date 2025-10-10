@@ -1,18 +1,21 @@
 import Colors from '@/shared/Colors';
 import { AIChatModel } from '@/shared/GlobalApi';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
-import { Camera, Plus, Send } from 'lucide-react-native';
+import { Camera, Copy, Plus, Send } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     FlatList,
     KeyboardAvoidingView,
     Platform,
     StyleSheet,
     Text,
     TextInput,
+    ToastAndroid,
     TouchableOpacity,
     View,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 
 interface Message {
     role: string;
@@ -21,7 +24,7 @@ interface Message {
 
 export default function ChatUI() {
     const navigation = useNavigation();
-    const { agentName, agentPrompt } = useLocalSearchParams();
+    const { agentName, agentPrompt, initialText } = useLocalSearchParams();
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isSending, setIsSending] = useState(false);
@@ -61,6 +64,7 @@ export default function ChatUI() {
     }, [agentName, navigation]);
 
     useEffect(() => {
+        setInput(initialText as string)
         if (agentPrompt) {
             setMessages([{ role: 'system', content: String(agentPrompt) }]);
         }
@@ -94,6 +98,17 @@ export default function ChatUI() {
         }
     };
 
+    const handleCopy = async (text: string) => {
+        try {
+            await Clipboard.setStringAsync(text);
+            if (Platform.OS === 'android') {
+                ToastAndroid.show('Copied to clipboard', ToastAndroid.SHORT);
+            }
+        } catch (error) {
+            console.error('Failed to copy text', error);
+        }
+    };
+
     return (
         <KeyboardAvoidingView
             keyboardVerticalOffset={100}
@@ -118,9 +133,25 @@ export default function ChatUI() {
                         >
                             {item.content}
                         </Text>
+                        {item.role === 'assistant' && (
+                            <TouchableOpacity
+                                style={styles.copyButton}
+                                onPress={() => handleCopy(item.content)}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            >
+                                <Copy size={16} color={Colors.PRIMARY} />
+                            </TouchableOpacity>
+                        )}
                     </View>
                 )}
             />
+
+            {isSending && (
+                <View style={styles.typingIndicator}>
+                    <ActivityIndicator size="small" color={Colors.PRIMARY} />
+                    <Text style={styles.typingText}>{agentName} is thinking</Text>
+                </View>
+            )}
 
             <View style={styles.inputContainer}>
                 <TouchableOpacity style={{ marginRight: 10, marginTop: 3 }} disabled={isSending}>
@@ -157,21 +188,25 @@ const styles = StyleSheet.create({
     userMessage: {
         backgroundColor: Colors.PRIMARY,
         alignSelf: 'flex-end',
-        borderBottomRightRadius: 2
+        borderBottomRightRadius: 2,
     },
     assistantMessage: {
-        backgroundColor: Colors.LIGHT_GREY,
+        backgroundColor: (Colors as any).LIGHT_GREY ?? '#EEEEEE',
         alignSelf: 'flex-start',
-        borderBottomLeftRadius: 20
+        borderBottomLeftRadius: 20,
     },
     messageText: {
         fontSize: 16,
     },
     userText: {
-        color: Colors.WHITE
+        color: Colors.WHITE,
     },
     assistantText: {
-        color: Colors.BLACK
+        color: Colors.BLACK,
+    },
+    copyButton: {
+        alignSelf: 'flex-end',
+        marginTop: 6,
     },
     inputContainer: {
         flexDirection: 'row',
@@ -186,5 +221,20 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.WHITE,
         marginRight: 8,
         paddingHorizontal: 15,
+    },
+    typingIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'center',
+        gap: 8,
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 16,
+        backgroundColor: 'rgba(54, 146, 255, 0.12)',
+        marginBottom: 6,
+    },
+    typingText: {
+        color: Colors.PRIMARY,
+        fontSize: 13,
     },
 });
