@@ -1,29 +1,31 @@
 import Colors from '@/shared/Colors';
+import { AIChatModel } from '@/shared/GlobalApi';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { Camera, Plus, Send } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+    FlatList,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
-const initialMessages = [
-    {
-        role: 'user',
-        content: 'How are you?'
-    },
-    {
-        role: 'assistant',
-        content: 'I am fine, thank you! How can I assist you today?'
-    },
-
-]
+interface Message {
+    role: string;
+    content: string;
+}
 
 export default function ChatUI() {
     const navigation = useNavigation();
-    const { agentName, agentPrompt, agentId, initialText } = useLocalSearchParams();
-    const [messages, setMessages] = useState(initialMessages);
-    const [input, setInput] = useState<string>();
+    const { agentName, agentPrompt } = useLocalSearchParams();
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [input, setInput] = useState('');
+    const [isSending, setIsSending] = useState(false);
 
-
-    // useEffects.
     useEffect(() => {
         navigation.setOptions({
             headerShown: true,
@@ -42,12 +44,11 @@ export default function ChatUI() {
                 >
                     <TouchableOpacity
                         activeOpacity={0.7}
-                        onPress={() => { console.log('Plus pressed'); }}
                         style={{
                             width: 32,
                             height: 32,
                             borderRadius: 16,
-                            backgroundColor: 'rgba(255,255,255,0.2)', // optional glass effect
+                            backgroundColor: 'rgba(255,255,255,0.2)',
                             justifyContent: 'center',
                             alignItems: 'center',
                         }}
@@ -57,41 +58,94 @@ export default function ChatUI() {
                 </View>
             ),
         });
-    }, [navigation]);
+    }, [agentName, navigation]);
 
+    useEffect(() => {
+        if (agentPrompt) {
+            setMessages([{ role: 'system', content: String(agentPrompt) }]);
+        }
+    }, [agentPrompt]);
 
-    // helpers.
-    const onSendMessage = () => {
-        if (!input?.trim()) return;
+    const onSendMessage = async () => {
+        const trimmed = input.trim();
+        if (!trimmed || isSending) return;
 
-        const newMessage = { role: 'user', content: input };
-        setMessages(prevMessages => [...prevMessages, newMessage]);
-    }
+        const userMessage: Message = { role: 'user', content: trimmed };
+        const updatedConversation = [...messages, userMessage];
 
+        setMessages(updatedConversation);
+        setInput('');
+        setIsSending(true);
+
+        try {
+            const result = await AIChatModel(updatedConversation);
+            const aiResponse =
+                typeof result?.aiResponse === 'string'
+                    ? { role: 'assistant', content: result.aiResponse }
+                    : result?.aiResponse;
+
+            if (aiResponse?.content) {
+                setMessages(prev => [...prev, aiResponse]);
+            }
+        } catch (error) {
+            console.error('Failed to send message', error);
+        } finally {
+            setIsSending(false);
+        }
+    };
 
     return (
-        <KeyboardAvoidingView keyboardVerticalOffset={100} behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[{ padding: 10, flex: 1, marginBottom: Platform.OS === 'ios' ? 20 : 0 }]}>
+        <KeyboardAvoidingView
+            keyboardVerticalOffset={100}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={[{ padding: 10, flex: 1, marginBottom: Platform.OS === 'ios' ? 20 : 0 }]}
+        >
             <FlatList
-                data={messages}
-                renderItem={({ item, index }) => (
-                    <View style={[styles.messageContainer, item.role === 'user' ? styles.userMessage : styles.assistantMessage]}>
-                        <Text style={[styles.messageText, item.role === 'user' ? styles.userText : styles.assistantText]}>{item.content}</Text>
+                data={messages.filter(message => message.role !== 'system')}
+                keyExtractor={(_, index) => index.toString()}
+                renderItem={({ item }) => (
+                    <View
+                        style={[
+                            styles.messageContainer,
+                            item.role === 'user' ? styles.userMessage : styles.assistantMessage,
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.messageText,
+                                item.role === 'user' ? styles.userText : styles.assistantText,
+                            ]}
+                        >
+                            {item.content}
+                        </Text>
                     </View>
-                )} />
+                )}
+            />
 
             <View style={styles.inputContainer}>
-                <TouchableOpacity style={{ marginRight: 10, marginTop: 3 }}>
+                <TouchableOpacity style={{ marginRight: 10, marginTop: 3 }} disabled={isSending}>
                     <Camera size={27} />
                 </TouchableOpacity>
-                <TextInput onChangeText={(text) => setInput(text)} style={styles.input} placeholder='Type a message ...' />
-                <TouchableOpacity onPress={onSendMessage} style={{ padding: 7, backgroundColor: Colors.PRIMARY, borderRadius: 99 }}>
+                <TextInput
+                    onChangeText={setInput}
+                    style={styles.input}
+                    placeholder="Type a message ..."
+                    value={input}
+                    editable={!isSending}
+                    returnKeyType="send"
+                    onSubmitEditing={onSendMessage}
+                />
+                <TouchableOpacity
+                    onPress={onSendMessage}
+                    style={{ padding: 7, backgroundColor: Colors.PRIMARY, borderRadius: 99 }}
+                    disabled={isSending}
+                >
                     <Send color={Colors.WHITE} size={20} />
                 </TouchableOpacity>
             </View>
         </KeyboardAvoidingView>
-    )
+    );
 }
-
 
 const styles = StyleSheet.create({
     messageContainer: {
@@ -123,7 +177,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 10,
-
     },
     input: {
         flex: 1,
@@ -132,7 +185,6 @@ const styles = StyleSheet.create({
         borderColor: '#CCC',
         backgroundColor: Colors.WHITE,
         marginRight: 8,
-        paddingHorizontal: 15
-    }
-
+        paddingHorizontal: 15,
+    },
 });
