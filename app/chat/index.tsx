@@ -61,6 +61,19 @@ const uploadToCloudinary = async (uri: string): Promise<string | null> => {
     }
 }
 
+const parseMessageContent = (
+    content: string
+): { text: string; imageUrl?: string } => {
+    if (!content) return { text: '' };
+    const match = content.match(/\[Image\]:\s*(https?:\/\/\S+)/i);
+    if (match) {
+        const imageUrl = match[1];
+        const text = content.replace(/\n?\n?\s*\[Image\]:\s*https?:\/\/\S+/i, '').trim();
+        return { text, imageUrl };
+    }
+    return { text: content };
+};
+
 export default function ChatUI() {
     const navigation = useNavigation();
     const { agentName, agentPrompt, initialText } = useLocalSearchParams();
@@ -132,13 +145,27 @@ export default function ChatUI() {
         const contentWithImage = imageUrl ? `${trimmed}\n\n[Image]: ${imageUrl}` : trimmed;
         const userMessage: Message = { role: 'user', content: contentWithImage };
         const updatedConversation = [...messages, userMessage];
+        // Build payload for API: include image as a separate content part when present
+        const payloadConversation = imageUrl
+            ? updatedConversation.map((m, idx, arr) =>
+                idx === arr.length - 1 && m.role === 'user'
+                    ? {
+                        role: m.role,
+                        content: [
+                            { type: 'text', text: trimmed },
+                            { type: 'image_url', image_url: { url: imageUrl } },
+                        ],
+                    }
+                    : m
+              )
+            : updatedConversation;
 
         setMessages(updatedConversation);
         setInput('');
         if (imageUrl) setImage(null);
 
         try {
-            const result = await AIChatModel(updatedConversation);
+            const result = await AIChatModel(payloadConversation as any);
             const aiResponse =
                 typeof result?.aiResponse === 'string'
                     ? { role: 'assistant', content: result.aiResponse }
@@ -168,7 +195,7 @@ export default function ChatUI() {
     const pickImage = async () => {
         // No permissions request is necessary for launching the image library
         let result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'],
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: false,
             aspect: [4, 3],
             quality: 0.5,
@@ -190,32 +217,43 @@ export default function ChatUI() {
             <FlatList
                 data={messages.filter(message => message.role !== 'system')}
                 keyExtractor={(_, index) => index.toString()}
-                renderItem={({ item }) => (
-                    <View
-                        style={[
-                            styles.messageContainer,
-                            item.role === 'user' ? styles.userMessage : styles.assistantMessage,
-                        ]}
-                    >
-                        <Text
+                renderItem={({ item }) => {
+                    const { text: bodyText, imageUrl } = parseMessageContent(item.content);
+                    return (
+                        <View
                             style={[
-                                styles.messageText,
-                                item.role === 'user' ? styles.userText : styles.assistantText,
+                                styles.messageContainer,
+                                item.role === 'user' ? styles.userMessage : styles.assistantMessage,
                             ]}
                         >
-                            {item.content}
-                        </Text>
-                        {item.role === 'assistant' && (
-                            <TouchableOpacity
-                                style={styles.copyButton}
-                                onPress={() => handleCopy(item.content)}
-                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                            >
-                                <Copy size={16} color={Colors.PRIMARY} />
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                )}
+                            {bodyText?.length > 0 && (
+                                <Text
+                                    style={[
+                                        styles.messageText,
+                                        item.role === 'user' ? styles.userText : styles.assistantText,
+                                    ]}
+                                >
+                                    {bodyText}
+                                </Text>
+                            )}
+                            {imageUrl && (
+                                <Image
+                                    source={{ uri: imageUrl }}
+                                    style={{ width: 200, height: 200, borderRadius: 8, marginTop: bodyText ? 8 : 0 }}
+                                />
+                            )}
+                            {item.role === 'assistant' && (
+                                <TouchableOpacity
+                                    style={styles.copyButton}
+                                    onPress={() => handleCopy(bodyText || item.content)}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                >
+                                    <Copy size={16} color={Colors.PRIMARY} />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    );
+                }}
             />
 
             {isSending && (
@@ -226,9 +264,9 @@ export default function ChatUI() {
             )}
             <View >
                 {image && (
-                    <View style={{ flexDirection: 'row', marginBottom: 5, alignItems: 'center', gap: 8 }}>
+                    <View style={{ flexDirection: 'row', marginBottom: 5, alignItems: 'center' }}>
                         <Image source={{ uri: image }} style={{ width: 50, height: 50, borderRadius: 6 }} />
-                        <TouchableOpacity onPress={() => setImage(null)}>
+                        <TouchableOpacity onPress={() => setImage(null)} style={{ marginLeft: 8 }}>
                             <X />
                         </TouchableOpacity>
                     </View>
@@ -307,7 +345,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         alignSelf: 'center',
-        gap: 8,
         paddingVertical: 6,
         paddingHorizontal: 12,
         borderRadius: 16,
@@ -317,5 +354,6 @@ const styles = StyleSheet.create({
     typingText: {
         color: Colors.PRIMARY,
         fontSize: 13,
+        marginLeft: 8,
     },
 });

@@ -1,8 +1,14 @@
 import axios from 'axios';
 
+type ContentPart = {
+    type: string;
+    text?: string;
+    image_url?: { url: string };
+};
+
 type ChatMessage = {
     role: string;
-    content: string;
+    content: string | ContentPart[];
 };
 
 export const AIChatModel = async (messages: ChatMessage[]) => {
