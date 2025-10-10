@@ -2,7 +2,7 @@ import Colors from '@/shared/Colors';
 import { AIChatModel } from '@/shared/GlobalApi';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { Camera, Copy, Plus, Send, X } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -18,6 +18,7 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker'
 import { Image } from 'expo-image';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface Message {
     role: string;
@@ -81,7 +82,14 @@ export default function ChatUI() {
     const [input, setInput] = useState('');
     const [isSending, setIsSending] = useState(false);
     const [image, setImage] = useState<string | null>(null);
+    const [hydrated, setHydrated] = useState(false);
+    const SESSION_KEY = `CHAT_SESSION_V1_${String(agentName ?? 'default')}`;
+    const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+    const SESSION_ID_KEY = `${SESSION_KEY}_ID`;
+    const CHAT_STORAGE_KEY = 'CHAT_HISTORY_V1';
 
+
+    const plusRef = useRef<() => void>();
 
     useEffect(() => {
         navigation.setOptions({
@@ -101,6 +109,7 @@ export default function ChatUI() {
                 >
                     <TouchableOpacity
                         activeOpacity={0.7}
+                        onPress={() => plusRef.current && plusRef.current()}
                         style={{
                             width: 32,
                             height: 32,
@@ -117,12 +126,43 @@ export default function ChatUI() {
         });
     }, [agentName, navigation]);
 
+    // Restore session on mount; otherwise seed with system prompt
     useEffect(() => {
-        setInput(initialText as string)
-        if (agentPrompt) {
-            setMessages([{ role: 'system', content: String(agentPrompt) }]);
-        }
-    }, [agentPrompt]);
+        const restore = async () => {
+            try {
+                const raw = await AsyncStorage.getItem(SESSION_KEY);
+                if (raw) {
+                    const data = JSON.parse(raw);
+                    if (Array.isArray(data?.messages)) setMessages(data.messages);
+                    if (typeof data?.input === 'string') setInput(data.input);
+                } else {
+                    if (initialText) setInput(String(initialText));
+                    if (agentPrompt) setMessages([{ role: 'system', content: String(agentPrompt) }]);
+                }
+                const savedId = await AsyncStorage.getItem(SESSION_ID_KEY);
+                if (savedId) setCurrentChatId(savedId);
+            } catch (e) {
+                console.error('Failed to restore chat session', e);
+            } finally {
+                setHydrated(true);
+            }
+        };
+        restore();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [SESSION_KEY]);
+
+    // Persist session whenever messages or input change
+    useEffect(() => {
+        if (!hydrated) return;
+        const persist = async () => {
+            try {
+                await AsyncStorage.setItem(SESSION_KEY, JSON.stringify({ messages, input }));
+            } catch (e) {
+                console.error('Failed to persist chat session', e);
+            }
+        };
+        persist();
+    }, [messages, input, hydrated, SESSION_KEY]);
 
     const onSendMessage = async () => {
         const trimmed = input.trim();
@@ -164,6 +204,31 @@ export default function ChatUI() {
         setInput('');
         if (imageUrl) setImage(null);
 
+        // Save or update history for this session
+        try {
+            const raw = await AsyncStorage.getItem(CHAT_STORAGE_KEY);
+            const list: any[] = raw ? JSON.parse(raw) : [];
+            let nextList = Array.isArray(list) ? list : [];
+            let chatId = currentChatId;
+            if (!chatId) {
+                chatId = Date.now().toString();
+                setCurrentChatId(chatId);
+                await AsyncStorage.setItem(SESSION_ID_KEY, chatId);
+                const newItem = {
+                    id: chatId,
+                    agentName: agentName ?? 'Chat',
+                    createdAt: new Date().toISOString(),
+                    messages: updatedConversation,
+                };
+                nextList.unshift(newItem);
+            } else {
+                nextList = nextList.map((c) => (c.id === chatId ? { ...c, messages: updatedConversation } : c));
+            }
+            await AsyncStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(nextList));
+        } catch (e) {
+            console.error('Failed to update chat history', e);
+        }
+
         try {
             const result = await AIChatModel(payloadConversation as any);
             const aiResponse =
@@ -180,6 +245,53 @@ export default function ChatUI() {
             setIsSending(false);
         }
     };
+
+    const onPressPlus = async () => {
+        try {
+            const nonSystem = messages.filter((m) => m.role !== 'system');
+            if (nonSystem.length === 0) {
+                await AsyncStorage.removeItem(CHAT_STORAGE_KEY);
+                await AsyncStorage.removeItem(SESSION_KEY);
+                await AsyncStorage.removeItem(SESSION_ID_KEY);
+                if (Platform.OS === 'android') {
+                    ToastAndroid.show('Cleared all chats', ToastAndroid.SHORT);
+                }
+                return;
+            }
+
+            const raw = await AsyncStorage.getItem(CHAT_STORAGE_KEY);
+            const list = raw ? JSON.parse(raw) : [];
+            const exists = currentChatId && Array.isArray(list) && list.some((c: any) => c.id === currentChatId);
+            if (!exists) {
+                const chatToSave = {
+                    id: Date.now().toString(),
+                    agentName: agentName ?? 'Chat',
+                    createdAt: new Date().toISOString(),
+                    messages,
+                };
+                list.unshift(chatToSave);
+                await AsyncStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(list));
+            }
+
+            await AsyncStorage.removeItem(SESSION_KEY);
+            await AsyncStorage.removeItem(SESSION_ID_KEY);
+            if (Platform.OS === 'android') {
+                ToastAndroid.show('Chat saved', ToastAndroid.SHORT);
+            }
+            setInput('');
+            setImage(null);
+            // Keep system prompt if present; otherwise empty
+            const systemMsg = messages.find((m) => m.role === 'system');
+            setMessages(systemMsg ? [systemMsg] : []);
+            setCurrentChatId(null);
+        } catch (e) {
+            console.error('Failed to handle plus press', e);
+        }
+    };
+
+    useEffect(() => {
+        plusRef.current = onPressPlus;
+    }, [onPressPlus]);
 
     const handleCopy = async (text: string) => {
         try {
