@@ -7,18 +7,23 @@ import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, 
 const initialMessages = [
     {
         role: 'user',
-        text: 'How are you?'
+        content: 'How are you?'
     },
     {
         role: 'assistant',
-        text: 'I am fine, thank you! How can I assist you today?'
-    }
+        content: 'I am fine, thank you! How can I assist you today?'
+    },
+
 ]
 
 export default function ChatUI() {
     const navigation = useNavigation();
     const { agentName, agentPrompt, agentId, initialText } = useLocalSearchParams();
     const [messages, setMessages] = useState(initialMessages);
+    const [input, setInput] = useState<string>();
+
+
+    // useEffects.
     useEffect(() => {
         navigation.setOptions({
             headerShown: true,
@@ -53,13 +58,24 @@ export default function ChatUI() {
             ),
         });
     }, [navigation]);
+
+
+    // helpers.
+    const onSendMessage = () => {
+        if (!input?.trim()) return;
+
+        const newMessage = { role: 'user', content: input };
+        setMessages(prevMessages => [...prevMessages, newMessage]);
+    }
+
+
     return (
         <KeyboardAvoidingView keyboardVerticalOffset={100} behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[{ padding: 10, flex: 1, marginBottom: Platform.OS === 'ios' ? 20 : 0 }]}>
             <FlatList
                 data={messages}
                 renderItem={({ item, index }) => (
                     <View style={[styles.messageContainer, item.role === 'user' ? styles.userMessage : styles.assistantMessage]}>
-                        <Text style={[styles.messageText, item.role === 'user' ? styles.userText : styles.assistantText]}>{item.text}</Text>
+                        <Text style={[styles.messageText, item.role === 'user' ? styles.userText : styles.assistantText]}>{item.content}</Text>
                     </View>
                 )} />
 
@@ -67,8 +83,8 @@ export default function ChatUI() {
                 <TouchableOpacity style={{ marginRight: 10, marginTop: 3 }}>
                     <Camera size={27} />
                 </TouchableOpacity>
-                <TextInput style={styles.input} placeholder='Type a message ...' />
-                <TouchableOpacity style={{ padding: 7, backgroundColor: Colors.PRIMARY, borderRadius: 99 }}>
+                <TextInput onChangeText={(text) => setInput(text)} style={styles.input} placeholder='Type a message ...' />
+                <TouchableOpacity onPress={onSendMessage} style={{ padding: 7, backgroundColor: Colors.PRIMARY, borderRadius: 99 }}>
                     <Send color={Colors.WHITE} size={20} />
                 </TouchableOpacity>
             </View>
