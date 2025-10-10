@@ -2,7 +2,7 @@ import Colors from '@/shared/Colors';
 import { AIChatModel } from '@/shared/GlobalApi';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { Camera, Copy, Plus, Send, X } from 'lucide-react-native';
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -89,7 +89,7 @@ export default function ChatUI() {
     const CHAT_STORAGE_KEY = 'CHAT_HISTORY_V1';
 
 
-    const plusRef = useRef<() => void>();
+    const plusRef = useRef<(() => void) | undefined>(undefined);
 
     useEffect(() => {
         navigation.setOptions({
@@ -197,7 +197,7 @@ export default function ChatUI() {
                         ],
                     }
                     : m
-              )
+            )
             : updatedConversation;
 
         setMessages(updatedConversation);
@@ -246,7 +246,7 @@ export default function ChatUI() {
         }
     };
 
-    const onPressPlus = async () => {
+    const onPressPlus = useCallback(async () => {
         try {
             const nonSystem = messages.filter((m) => m.role !== 'system');
             if (nonSystem.length === 0) {
@@ -287,7 +287,7 @@ export default function ChatUI() {
         } catch (e) {
             console.error('Failed to handle plus press', e);
         }
-    };
+    }, [CHAT_STORAGE_KEY, SESSION_KEY, SESSION_ID_KEY, currentChatId, messages, agentName]);
 
     useEffect(() => {
         plusRef.current = onPressPlus;

@@ -1,8 +1,10 @@
 import Colors from '@/shared/Colors';
+import { RelativePathString, useRouter } from 'expo-router';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function CreateAgentBanner() {
+    const router = useRouter();
     return (
         <View style={styles.container}>
             <Image
@@ -11,7 +13,7 @@ export default function CreateAgentBanner() {
             />
             <View style={styles.textContainer}>
                 <Text style={styles.heading}>Create your own agent</Text>
-                <TouchableOpacity style={styles.subHeading}><Text style={{ color: Colors.PRIMARY, textAlign: 'center', marginTop: 5 }}>Create Now</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push('/create-agent' as RelativePathString)} style={styles.subHeading}><Text style={{ color: Colors.PRIMARY, textAlign: 'center', marginTop: 5 }}>Create Now</Text></TouchableOpacity>
             </View>
         </View>
     );
