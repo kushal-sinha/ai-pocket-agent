@@ -1,6 +1,6 @@
-﻿import { fireStoreDb } from "@/config/FirebaseConfig";
+import { fireStoreDb } from "@/config/FirebaseConfig";
 import Colors from "@/shared/Colors";
-import { useAuth, useSSO, useUser } from "@clerk/clerk-expo";
+import { useAuth, useOAuth, useUser } from "@clerk/clerk-expo";
 import * as AuthSession from 'expo-auth-session';
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -41,37 +41,77 @@ export default function Index() {
 
   useWarmUpBrowser()
 
-  // Use the `useSSO()` hook to access the `startSSOFlow()` method
-  const { startSSOFlow } = useSSO()
+  // Use Clerk OAuth for Google sign-in
+  const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
   const onLoginPress = useCallback(async () => {
     try {
-      console.log("Starting Google login…");
+      setLoading(true);
+      console.log("Starting Google login...");
 
-      const { createdSessionId, setActive, signUp } = await startSSOFlow({
-        strategy: "oauth_google",
-        redirectUrl: AuthSession.makeRedirectUri({ scheme: "aipocketagent" }),
+      const redirectUrl = AuthSession.makeRedirectUri({ scheme: "aipocketagent" });
+      console.log("Redirect URL:", redirectUrl);
+
+      const { createdSessionId, setActive, signUp, signIn } = await startOAuthFlow({
+        redirectUrl: redirectUrl,
       });
 
-      if (signUp) {
-        await setDoc(doc(fireStoreDb, 'users', signUp.id ?? ''), {
-          email: signUp.emailAddress,
-          name: signUp.firstName + ' ' + signUp.lastName,
-          joinDate: Date.now(),
-          credits: 20
-        });
-      }
+      console.log("OAuth completed - Session ID:", createdSessionId);
+      console.log("SignUp:", signUp);
+      console.log("SignIn:", signIn);
 
-      if (createdSessionId) {
-        await setActive!({ session: createdSessionId });
-        router.push("/");
+      if (createdSessionId && setActive) {
+        // Activate the session first
+        await setActive({ session: createdSessionId });
+        console.log("Session activated");
+
+        // Wait a bit for Clerk to fully initialize
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Now check if we have user data
+        // The user object should be available through useUser() hook after session is set
+        console.log("Checking for user data...");
+
       } else {
-        console.log("No session created, missing MFA or other requirements.");
+        console.error("No session created");
+        alert("Authentication failed. Please try again.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Login error:", err);
+      if (err.code !== 'user_cancelled') {
+        alert(`Login failed: ${err.message || 'Please try again'}`);
+      }
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  }, [startOAuthFlow]);
 
+  // Handle Firestore user creation in the useEffect when user becomes available
+  useEffect(() => {
+    const createUserInFirestore = async () => {
+      if (isSignedIn && user && !loading) {
+        try {
+          console.log("User signed in:", user.id);
+
+          // Check if user already exists to avoid overwriting
+          const userRef = doc(fireStoreDb, 'users', user.id);
+
+          await setDoc(userRef, {
+            email: user.primaryEmailAddress?.emailAddress || '',
+            name: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'User',
+            joinDate: Date.now(),
+            credits: 20
+          }, { merge: true }); // merge: true prevents overwriting existing data
+
+          console.log("User data saved to Firestore");
+          router.replace('/(tabs)/Home');
+        } catch (error) {
+          console.error("Error creating user in Firestore:", error);
+        }
+      }
+    };
+
+    createUserInFirestore();
+  }, [isSignedIn, user, loading]);
   return (
     <LinearGradient
       colors={["#0A1D37", "#1E3C72", "#2A5298"]}
