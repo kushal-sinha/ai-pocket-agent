@@ -111,7 +111,7 @@ export default function Index() {
     };
 
     createUserInFirestore();
-  }, [user, loading]);
+  }, [isSignedIn, user, loading]);
   return (
     <LinearGradient
       colors={["#0A1D37", "#1E3C72", "#2A5298"]}
