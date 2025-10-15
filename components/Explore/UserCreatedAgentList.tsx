@@ -38,6 +38,8 @@ export default function UserCreatedAgentList() {
             <Text style={{ fontSize: 18, fontWeight: 'bold' }}>My Agent/Assistant</Text>
             <FlatList
                 data={agentList}
+                scrollEnabled={false}
+                keyExtractor={(item) => item.agentId}
                 renderItem={({ item, index }) => (
                     <TouchableOpacity onPress={() => router.push({
                         pathname: '/chat',

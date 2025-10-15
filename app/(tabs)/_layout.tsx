@@ -25,7 +25,6 @@ export default function TabLayout() {
                 },
                 tabBarHideOnKeyboard: true,
                 sceneStyle: {
-                    backgroundColor: '#0A1D37',
                 },
             }}
         >

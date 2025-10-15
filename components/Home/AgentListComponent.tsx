@@ -17,6 +17,7 @@ export default function AgentListComponent({ isFeatured }: AgentListComponentPro
         <FlatList
             data={featuredAgents}
             numColumns={2}
+            scrollEnabled={false}
             keyExtractor={agent => agent.id.toString()}
             renderItem={({ item, index }) => (
                 <TouchableOpacity onPress={() => router.push({
