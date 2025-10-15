@@ -9,7 +9,7 @@ export default function Explore() {
         <View style={{ padding: 20 }}>
             <CreateAgentBanner />
             <UserCreatedAgentList />
-            <Text>
+            <Text style={{ fontSize: 18, fontWeight: 'bold' }}>
                 Featured Agent
             </Text>
             <AgentListComponent isFeatured={true} />

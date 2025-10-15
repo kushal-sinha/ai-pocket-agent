@@ -1,10 +1,11 @@
-import { View, Text, FlatList } from 'react-native'
+import { View, Text, FlatList, TouchableOpacity } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 import { fireStoreDb } from '@/config/FirebaseConfig'
 import { useUser } from '@clerk/clerk-expo'
 import { ArrowRight } from 'lucide-react-native'
 import Colors from '@/shared/Colors'
+import { useRouter } from 'expo-router'
 
 type Agent = {
     agentName: string,
@@ -15,6 +16,7 @@ type Agent = {
 
 export default function UserCreatedAgentList() {
     const { user } = useUser();
+    const router = useRouter();
     const [agentList, setAgentList] = useState<Agent[]>([]);
     useEffect(() => {
         user && getUserAgents();
@@ -37,7 +39,15 @@ export default function UserCreatedAgentList() {
             <FlatList
                 data={agentList}
                 renderItem={({ item, index }) => (
-                    <View style={{ display: 'flex', flexDirection: 'row', padding: 15, borderWidth: 0.5, alignItems: 'center', justifyContent: 'space-between', backgroundColor: Colors.WHITE, borderRadius: 15, marginTop: 10, borderColor: Colors.GREY }}>
+                    <TouchableOpacity onPress={() => router.push({
+                        pathname: '/chat',
+                        params: {
+                            agentName: item.agentName,
+                            initialText: '',
+                            agentPrompt: item.prompt,
+                            agentId: item.agentId,
+                        },
+                    })} style={{ display: 'flex', flexDirection: 'row', padding: 15, borderWidth: 0.5, alignItems: 'center', justifyContent: 'space-between', backgroundColor: Colors.WHITE, borderRadius: 15, marginTop: 10, borderColor: Colors.GREY }}>
                         <View style={{ display: 'flex', flexDirection: 'row', gap: 10 }}>
                             <Text style={{ fontSize: 25, alignItems: 'center' }}>{item.emoji}</Text>
                             <Text style={{ fontSize: 20, fontWeight: 'semibold' }}>{item.agentName}</Text>
@@ -45,7 +55,7 @@ export default function UserCreatedAgentList() {
                         <ArrowRight />
 
 
-                    </View>
+                    </TouchableOpacity>
                 )} />
         </View>
     )
