@@ -19,6 +19,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker'
 import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface Message {
     role: string;
@@ -321,91 +322,93 @@ export default function ChatUI() {
     };
 
     return (
-        <KeyboardAvoidingView
-            keyboardVerticalOffset={100}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            style={[{ padding: 10, flex: 1, marginBottom: Platform.OS === 'ios' ? 20 : 0 }]}
-        >
-            <FlatList
-                data={messages.filter(message => message.role !== 'system')}
-                keyExtractor={(_, index) => index.toString()}
-                renderItem={({ item }) => {
-                    const { text: bodyText, imageUrl } = parseMessageContent(item.content);
-                    return (
-                        <View
-                            style={[
-                                styles.messageContainer,
-                                item.role === 'user' ? styles.userMessage : styles.assistantMessage,
-                            ]}
-                        >
-                            {bodyText?.length > 0 && (
-                                <Text
-                                    style={[
-                                        styles.messageText,
-                                        item.role === 'user' ? styles.userText : styles.assistantText,
-                                    ]}
-                                >
-                                    {bodyText}
-                                </Text>
-                            )}
-                            {imageUrl && (
-                                <Image
-                                    source={{ uri: imageUrl }}
-                                    style={{ width: 200, height: 200, borderRadius: 8, marginTop: bodyText ? 8 : 0 }}
-                                />
-                            )}
-                            {item.role === 'assistant' && (
-                                <TouchableOpacity
-                                    style={styles.copyButton}
-                                    onPress={() => handleCopy(bodyText || item.content)}
-                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                >
-                                    <Copy size={16} color={Colors.PRIMARY} />
-                                </TouchableOpacity>
-                            )}
-                        </View>
-                    );
-                }}
-            />
+        <SafeAreaView style={{ flex: 1 }}>
+            <KeyboardAvoidingView
+                keyboardVerticalOffset={100}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                style={{ padding: 10, flex: 1, marginBottom: Platform.OS === 'ios' ? 20 : 0 }}
+            >
+                <FlatList
+                    data={messages.filter(message => message.role !== 'system')}
+                    keyExtractor={(_, index) => index.toString()}
+                    renderItem={({ item }) => {
+                        const { text: bodyText, imageUrl } = parseMessageContent(item.content);
+                        return (
+                            <View
+                                style={[
+                                    styles.messageContainer,
+                                    item.role === 'user' ? styles.userMessage : styles.assistantMessage,
+                                ]}
+                            >
+                                {bodyText?.length > 0 && (
+                                    <Text
+                                        style={[
+                                            styles.messageText,
+                                            item.role === 'user' ? styles.userText : styles.assistantText,
+                                        ]}
+                                    >
+                                        {bodyText}
+                                    </Text>
+                                )}
+                                {imageUrl && (
+                                    <Image
+                                        source={{ uri: imageUrl }}
+                                        style={{ width: 200, height: 200, borderRadius: 8, marginTop: bodyText ? 8 : 0 }}
+                                    />
+                                )}
+                                {item.role === 'assistant' && (
+                                    <TouchableOpacity
+                                        style={styles.copyButton}
+                                        onPress={() => handleCopy(bodyText || item.content)}
+                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    >
+                                        <Copy size={16} color={Colors.PRIMARY} />
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        );
+                    }}
+                />
 
-            {isSending && (
-                <View style={styles.typingIndicator}>
-                    <ActivityIndicator size="small" color={Colors.PRIMARY} />
-                    <Text style={styles.typingText}>{agentName} is thinking</Text>
-                </View>
-            )}
-            <View >
-                {image && (
-                    <View style={{ flexDirection: 'row', marginBottom: 5, alignItems: 'center' }}>
-                        <Image source={{ uri: image }} style={{ width: 50, height: 50, borderRadius: 6 }} />
-                        <TouchableOpacity onPress={() => setImage(null)} style={{ marginLeft: 8 }}>
-                            <X />
-                        </TouchableOpacity>
+                {isSending && (
+                    <View style={styles.typingIndicator}>
+                        <ActivityIndicator size="small" color={Colors.PRIMARY} />
+                        <Text style={styles.typingText}>{agentName} is thinking</Text>
                     </View>
                 )}
-                <View style={styles.inputContainer}>
-                    <TouchableOpacity onPress={pickImage} style={{ marginRight: 10, marginTop: 3 }} disabled={isSending}>
-                        <Camera size={27} />
-                    </TouchableOpacity>
-                    <TextInput
-                        onChangeText={setInput}
-                        style={styles.input}
-                        placeholder="Type a message ..."
-                        value={input}
-                        editable={!isSending}
-                        returnKeyType="send"
-                        onSubmitEditing={onSendMessage}
-                    />
-                    <TouchableOpacity
-                        onPress={onSendMessage}
-                        style={{ padding: 7, backgroundColor: Colors.PRIMARY, borderRadius: 99 }}
-                        disabled={isSending}
-                    >
-                        <Send color={Colors.WHITE} size={20} />
-                    </TouchableOpacity>
+                <View >
+                    {image && (
+                        <View style={{ flexDirection: 'row', marginBottom: 5, alignItems: 'center' }}>
+                            <Image source={{ uri: image }} style={{ width: 50, height: 50, borderRadius: 6 }} />
+                            <TouchableOpacity onPress={() => setImage(null)} style={{ marginLeft: 8 }}>
+                                <X />
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                    <View style={styles.inputContainer}>
+                        <TouchableOpacity onPress={pickImage} style={{ marginRight: 10, marginTop: 3 }} disabled={isSending}>
+                            <Camera size={27} />
+                        </TouchableOpacity>
+                        <TextInput
+                            onChangeText={setInput}
+                            style={styles.input}
+                            placeholder="Type a message ..."
+                            value={input}
+                            editable={!isSending}
+                            returnKeyType="send"
+                            onSubmitEditing={onSendMessage}
+                        />
+                        <TouchableOpacity
+                            onPress={onSendMessage}
+                            style={{ padding: 7, backgroundColor: Colors.PRIMARY, borderRadius: 99 }}
+                            disabled={isSending}
+                        >
+                            <Send color={Colors.WHITE} size={20} />
+                        </TouchableOpacity>
+                    </View>
                 </View>
-            </View>
-        </KeyboardAvoidingView>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
     );
 }
 
